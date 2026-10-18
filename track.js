@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 
 export class Track {
-  constructor(points, { width = 14, samples = 2400, tension = 0.5 } = {}) {
+  constructor(points, { width = 14, samples = 2400, tension = 0.5, lift = null, gaps = null } = {}) {
     this.width = width;
     this.curve = new THREE.CatmullRomCurve3(points, true, 'centripetal', tension);
     const n = samples;
@@ -12,6 +12,8 @@ export class Track {
     // 균일 간격으로 샘플링
     const pts = this.curve.getSpacedPoints(n);
     pts.pop(); // 마지막 점 = 첫 점
+    // 고가 구간(점프 갭용) 높이 더하기
+    if (lift) pts.forEach((p, i) => { p.y += lift(i / n); });
     let up = new THREE.Vector3(0, 1, 0);
     let total = 0;
     for (let i = 0; i < n; i++) {
@@ -27,7 +29,12 @@ export class Track {
     }
     this.length = total + pts[n - 1].distanceTo(pts[0]);
     this.step = this.length / n;
+    // 도로가 끊긴 구간 (u 비율 → 거리 s)
+    this.skip = (gaps || []).map(([a, b]) => [this.sAtU(a), this.sAtU(b)]);
   }
+
+  sAtU(u) { return this.dist[Math.min(this.n - 1, Math.max(0, Math.floor(u * this.n)))]; }
+  inGap(s) { s = ((s % this.length) + this.length) % this.length; return this.skip.some(([a, b]) => s >= a && s <= b); }
 
   // 거리 s에서의 프레임 (보간)
   frame(s, out = {}) {
@@ -48,37 +55,40 @@ export class Track {
   }
 
   // 도로 리본 메쉬 (두께 포함)
-  buildRoad(material, { thickness = 0, sideMaterial = null, uvScale = 14 } = {}) {
+  buildRoad(material, { thickness = 0, sideMaterial = null, uvScale = 14, skip = null } = {}) {
     const group = new THREE.Group();
     const hw = this.width / 2;
-    const top = ribbon(this, -hw, hw, 0.02, uvScale, false);
+    const top = ribbon(this, -hw, hw, 0.02, uvScale, false, skip);
     const road = new THREE.Mesh(top, material);
     road.receiveShadow = true;
     group.add(road);
     if (thickness > 0) {
       const mat = sideMaterial || material;
-      const bottom = new THREE.Mesh(ribbon(this, -hw, hw, -thickness, uvScale, true), mat);
-      const l = new THREE.Mesh(wall(this, -hw, 0.02, -thickness, false), mat);
-      const r = new THREE.Mesh(wall(this, hw, 0.02, -thickness, true), mat);
+      const bottom = new THREE.Mesh(ribbon(this, -hw, hw, -thickness, uvScale, true, skip), mat);
+      const l = new THREE.Mesh(wall(this, -hw, 0.02, -thickness, false, skip), mat);
+      const r = new THREE.Mesh(wall(this, hw, 0.02, -thickness, true, skip), mat);
       [bottom, l, r].forEach(m => { m.castShadow = true; m.receiveShadow = true; group.add(m); });
     }
     return group;
   }
 
   // 도로 가장자리를 따라가는 띠 (연석, 네온 등)
-  buildStrip(material, offsetA, offsetB, lift = 0.03, uvScale = 4) {
-    const m = new THREE.Mesh(ribbon(this, offsetA, offsetB, lift, uvScale, false), material);
+  buildStrip(material, offsetA, offsetB, lift = 0.03, uvScale = 4, skip = null) {
+    const m = new THREE.Mesh(ribbon(this, offsetA, offsetB, lift, uvScale, false, skip), material);
     m.receiveShadow = true;
     return m;
   }
 
   // 가장자리 세로 벽 (가드레일, 네온 벽)
-  buildWall(material, offset, h0, h1, flip = false) {
-    return new THREE.Mesh(wall(this, offset, h0, h1, flip), material);
+  buildWall(material, offset, h0, h1, flip = false, skip = null) {
+    return new THREE.Mesh(wall(this, offset, h0, h1, flip, skip), material);
   }
 }
 
-function ribbon(track, a, b, lift, uvScale, flip) {
+function inSkip(skip, d) { return skip && skip.length && skip.some(([a, b]) => d >= a && d <= b); }
+
+function ribbon(track, a, b, lift, uvScale, flip, skip = null) {
+  skip = skip || track.skip;
   const n = track.n;
   const verts = [], uvs = [], idx = [], normals = [];
   for (let i = 0; i <= n; i++) {
@@ -91,7 +101,7 @@ function ribbon(track, a, b, lift, uvScale, flip) {
     const nn = flip ? u.clone().negate() : u;
     normals.push(nn.x, nn.y, nn.z, nn.x, nn.y, nn.z);
     uvs.push(0, v, 1, v);
-    if (i < n) {
+    if (i < n && !inSkip(skip, track.dist[k])) {
       const o = i * 2;
       if (flip) idx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3);
       else idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);
@@ -105,7 +115,8 @@ function ribbon(track, a, b, lift, uvScale, flip) {
   return g;
 }
 
-function wall(track, offset, h0, h1, flip) {
+function wall(track, offset, h0, h1, flip, skip = null) {
+  skip = skip || track.skip;
   const n = track.n;
   const verts = [], uvs = [], idx = [];
   for (let i = 0; i <= n; i++) {
@@ -116,7 +127,7 @@ function wall(track, offset, h0, h1, flip) {
     const a = base.clone().addScaledVector(u, h0), b = base.clone().addScaledVector(u, h1);
     verts.push(a.x, a.y, a.z, b.x, b.y, b.z);
     uvs.push(v, 1, v, 0);
-    if (i < n) {
+    if (i < n && !inSkip(skip, track.dist[k])) {
       const o = i * 2;
       if (flip) idx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3);
       else idx.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);

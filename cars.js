@@ -450,26 +450,51 @@ export function buildCar(config) {
   const wheels = [];
   const track = W / 2 - 0.15;
   const wheelStyle = config.wheel || (spec.angular ? 'cyber' : 'aero');
+  // 비행 모드: 바퀴가 수평으로 접히며 추진기로 변신 (fold 그룹)
+  const folds = [];
+  const flameMat = new THREE.MeshBasicMaterial({ color: '#7fe8ff', transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+  const ringMat = new THREE.MeshStandardMaterial({ color: '#bff6ff', emissive: '#39e6ff', emissiveIntensity: 3 });
   [[xf, 1], [xf, -1], [xr, 1], [xr, -1]].forEach(([x, sd]) => {
+    const fold = new THREE.Group();
+    fold.position.set(x, spec.r, sd * track);
     const wh = buildWheel(spec, wheelStyle, paint);
-    wh.position.set(x, spec.r, sd * track);
     if (sd < 0) wh.rotation.y = Math.PI;
     wh.userData.sign = sd;
     wh.userData.front = x === xf;
-    car.add(wh);
+    fold.add(wh);
+    // 추진 불꽃 (접혔을 때 아래를 향함)
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(spec.r * 0.7, 1.6, 16, 1, true), flameMat);
+    flame.rotation.x = sd > 0 ? Math.PI / 2 : -Math.PI / 2;
+    flame.position.z = sd * 1.0;
+    flame.visible = false;
+    fold.add(flame);
+    const glow = new THREE.Mesh(new THREE.TorusGeometry(spec.r * 0.62, 0.05, 8, 24), ringMat);
+    glow.position.z = sd * 0.15;
+    glow.visible = false;
+    fold.add(glow);
+    car.add(fold);
     wheels.push(wh);
+    folds.push({ fold, sd, flame, glow });
+  });
+  // 뒤쪽 부스터 불꽃
+  const boosters = [];
+  [-1, 1].forEach(sd => {
+    const b = new THREE.Mesh(new THREE.ConeGeometry(0.16, 1.4, 12, 1, true), new THREE.MeshBasicMaterial({ color: '#ff9a3c', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
+    b.rotation.z = Math.PI / 2;
+    b.position.set(-0.7, prof.topY(L * 0.03) - 0.35, sd * W * 0.22);
+    b.visible = false;
+    body.add(b); boosters.push(b);
   });
 
   // 차 중심을 원점으로 (앞이 +Z 방향)
   body.position.y = stance.dy;
-  wheels.forEach(w => (w.position.y = spec.r));
   const pivot = new THREE.Group();
   car.position.set(-L / 2, 0, 0);
   pivot.add(car);
   pivot.rotation.y = -Math.PI / 2;
   const root = new THREE.Group();
   root.add(pivot);
-  root.userData = { spec, wheels, body, lights, paint };
+  root.userData = { spec, wheels, body, lights, paint, folds, boosters };
   tryLoadGLB(config.model, root, paint);
   return root;
 }
@@ -505,4 +530,5 @@ async function tryLoadGLB(id, root, paint) {
   root.children.forEach(ch => (ch.visible = false));
   root.add(model);
   root.userData.wheels = [];
+  root.userData.folds = [];
 }

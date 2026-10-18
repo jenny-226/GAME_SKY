@@ -14,39 +14,52 @@
     } }
   </script>
 </head>
-<body data-mode="menu">
+<body data-mode="title" data-hand="right">
   <canvas id="game"></canvas>
 
-  <!-- 메인 메뉴 -->
-  <section id="menu" class="screen">
+  <!-- 타이틀 -->
+  <section id="title" class="screen">
     <div class="logo">GAME <span>SKY</span></div>
-    <div class="world-tag">현재 월드 · <b id="worldName">-</b></div>
+    <div class="subtitle">LANDMARK STUNT TOUR</div>
+    <p class="tagline">하늘을 나는 테슬라로 세계 명소를 누비는 스턴트 쇼</p>
     <div class="menu-btns">
-      <button id="btnStart" class="btn big cyan">주행 시작</button>
+      <button id="btnTour" class="btn big accent">🌍 월드 투어</button>
+      <button id="btnContinue" class="btn">▶ 이어하기 · <span id="titleWorld"></span></button>
       <button id="btnGarage" class="btn">🚗 차고 (색상·모양)</button>
-      <button id="btnWorld" class="btn">🌍 월드 선택</button>
+      <button id="btnSettings" class="btn">⚙️ 조작 · 설정</button>
     </div>
-    <p class="hint">PC: 방향키/WASD · 모바일: 화면 버튼</p>
   </section>
 
-  <!-- 월드 선택 -->
-  <section id="worlds" class="screen">
-    <div class="topbar"><button id="worldBack" class="back">↩</button><h2>월드 선택</h2></div>
-    <div id="worldList"></div>
+  <!-- 월드 투어 지도 -->
+  <section id="tour" class="screen">
+    <div class="topbar"><button id="tourBack" class="back">↩</button><h2>월드 투어</h2><div class="coins"><i>●</i><span class="coinCount">0</span></div></div>
+    <div id="tourList"></div>
   </section>
 
-  <!-- 차고 (자동차 선택) -->
+  <!-- 월드: 스토리 + 단계 선택 -->
+  <section id="world" class="screen">
+    <div class="topbar"><button id="worldBack" class="back">↩</button>
+      <h2><span id="wFlag"></span> <span id="wName"></span><small id="wEn"></small></h2>
+      <button id="btnWorldGarage" class="mini">🚗 차고</button>
+    </div>
+    <div class="story">
+      <div class="host"><div id="hostEmoji" class="avatar"></div><b id="hostName"></b></div>
+      <p id="storyText"></p>
+      <button id="storyNext" class="mini">다음 ▶</button>
+    </div>
+    <div id="stageList"></div>
+  </section>
+
+  <!-- 차고 -->
   <section id="garage" class="screen">
-    <div class="topbar">
-      <button id="garageBack" class="back">↩</button>
-      <div class="coins"><i>●</i><span id="coinCount">0</span><b>+</b></div>
-    </div>
+    <div class="topbar"><button id="garageBack" class="back">↩</button><h2>차고</h2><div class="coins"><i>●</i><span class="coinCount">0</span></div></div>
     <div class="panel-left">
       <div class="sel-title"><span class="ic">🚘</span><b>CARS</b><em>Selection</em></div>
       <div class="car-name"><span id="carName">Model 3</span><small id="carSub"></small></div>
       <div class="stat"><span>⏱</span><label>SPEED</label><div class="bar"><i id="statSpeed"></i></div></div>
       <div class="stat"><span>🛞</span><label>HANDLING</label><div class="bar"><i id="statHandling"></i></div></div>
       <div class="stat"><span>🛑</span><label>BRAKE</label><div class="bar"><i id="statBrake"></i></div></div>
+      <p class="fly-note">✈ 모든 차량은 비행 모드 탑재: 공중에서 바퀴가 접히며 추진기로 변신!</p>
     </div>
     <div class="panel-right">
       <button class="tool on" data-tab="paint"><span>🎨</span>Paint</button>
@@ -66,43 +79,107 @@
         <div class="opt-row"><span>스포일러</span><div id="optSpoiler"></div></div>
         <div class="opt-row"><span>차고</span><div id="optStance"></div></div>
       </div>
-      <button id="btnDrive" class="btn cyan drive">🏁 DRIVE</button>
     </div>
   </section>
 
-  <!-- 주행 HUD -->
+  <!-- 설정 / 조작법 -->
+  <section id="settings" class="screen">
+    <div class="topbar"><button id="settingsBack" class="back">↩</button><h2>조작 · 설정</h2></div>
+    <div class="settings-body">
+      <div class="set-row"><span>손잡이 (버튼 위치)</span><div><button class="chip" data-hand="right">오른손잡이</button><button class="chip" data-hand="left">왼손잡이</button></div></div>
+      <div class="set-row"><span>조향 감도</span><input type="range" id="sensRange" min="0.6" max="1.6" step="0.1" /></div>
+      <div class="set-row"><span>화면 흔들림</span><input type="checkbox" id="shakeToggle" /></div>
+      <h3>⌨️ PC (오른손: 마우스 / 왼손: 키보드)</h3>
+      <div class="keys">
+        <div><kbd>마우스 이동</kbd><span>커서 방향으로 좌우 이동</span></div>
+        <div><kbd>W</kbd><span>가속 (누르고 있기)</span></div>
+        <div><kbd>S</kbd><span>감속</span></div>
+        <div><kbd>SPACE</kbd> 또는 <kbd>마우스 왼쪽</kbd><span>점프 · 비행 (누르고 있기)</span></div>
+        <div><kbd>SHIFT</kbd><span>드리프트 (누르고 좌우로)</span></div>
+        <div><kbd>Q</kbd> <kbd>E</kbd><span>공중 좌/우 배럴롤</span></div>
+        <div><kbd>R</kbd><span>공중 앞 플립</span></div>
+        <div><kbd>F</kbd><span>착지 자세 잡기 (착지 직전에!)</span></div>
+        <div><kbd>ESC</kbd><span>일시정지</span></div>
+      </div>
+      <h3>📱 모바일</h3>
+      <div class="keys">
+        <div><kbd>손가락 드래그</kbd><span>손가락이 있는 쪽으로 차가 이동</span></div>
+        <div><kbd>FLY</kbd><span>점프 · 비행 (누르고 있기)</span></div>
+        <div><kbd>BOOST</kbd> <kbd>DRIFT</kbd><span>가속 · 드리프트</span></div>
+        <div><kbd>⟲</kbd> <kbd>⟳</kbd> <kbd>FLIP</kbd><span>공중 회전</span></div>
+        <div><kbd>LAND</kbd><span>착지 자세 (착지 직전에 누르면 PERFECT)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 브리핑 -->
+  <section id="brief" class="screen">
+    <div class="brief-card">
+      <div class="brief-top" id="briefTitle"></div>
+      <h2 id="briefName"></h2>
+      <p id="briefDesc"></p>
+      <div class="brief-goals">
+        <div>🏁 결승선 통과 <b>★</b></div>
+        <div>🎯 <span id="briefMission"></span> <b>★</b></div>
+        <div>💯 목표 점수 <span id="briefTarget"></span> <b>★</b></div>
+      </div>
+      <div class="brief-tips">점프 → 공중에서 <kbd>Q</kbd>/<kbd>E</kbd>/<kbd>R</kbd> 회전 → 착지 직전 <kbd>F</kbd> = PERFECT! · <kbd>SPACE</kbd> 길게 = 비행<br>🎯 <kbd>W</kbd>/<kbd>S</kbd>로 속도를 조절해 초록 목표 패드에 착지하면 BULLSEYE 보너스</div>
+      <div class="brief-btns"><button id="briefBack" class="btn">← 단계 선택</button><button id="btnGo" class="btn big accent">START</button></div>
+    </div>
+  </section>
+
+  <!-- HUD -->
   <section id="hud" class="screen">
     <div class="hud-top">
-      <div class="hud-box"><small>LAP</small><b id="lap">1</b></div>
-      <div class="hud-box"><small>TIME</small><b id="time">00:00.00</b></div>
-      <div class="hud-box"><small>BEST</small><b id="best">--:--.--</b></div>
+      <div class="score-box"><small>SCORE</small><b id="hudScore">0</b><span id="hudMult">x1</span><em id="hudCombo"></em></div>
+      <div class="prog"><div class="prog-bar"><i id="progFill"></i><div id="progMarks"></div></div><div id="hudMission"></div></div>
       <button id="btnPause" class="hud-pause">❚❚</button>
     </div>
-    <canvas id="minimap" width="150" height="150"></canvas>
-    <div class="speedo"><b id="speed">0</b><small>km/h</small><div class="sbar"><i id="speedBar"></i></div></div>
-    <div class="touch">
-      <div class="steer">
-        <button data-key="left">◀</button>
-        <button data-key="right">▶</button>
-      </div>
-      <div class="pedals">
-        <button data-key="brake" class="brake">BRAKE</button>
-        <button data-key="gas" class="gas">GAS</button>
-      </div>
+    <div id="hudLive"></div>
+    <div id="pops"></div>
+    <div id="landHint">⬇ 착지! <kbd>F</kbd> / LAND</div>
+    <div class="hud-bottom">
+      <div class="speedo"><b id="hudSpeed">0</b><small>km/h</small></div>
+      <div class="energy"><small>✈ FLY</small><div class="ebar"><i id="energyFill"></i></div></div>
+    </div>
+    <div class="pad">
+      <button data-tap="rollL" class="air">⟲</button>
+      <button data-tap="flip" class="air">FLIP</button>
+      <button data-tap="rollR" class="air">⟳</button>
+      <button data-hold="drift" class="drift">DRIFT</button>
+      <button data-tap="land" class="land">LAND</button>
+      <button data-hold="boost" class="boost">BOOST</button>
+      <button data-hold="fly" class="fly">FLY</button>
     </div>
   </section>
 
   <!-- 일시정지 -->
   <section id="pause" class="screen">
     <h2>일시정지</h2>
-    <button id="btnResume" class="btn big cyan">계속하기</button>
+    <button id="btnResume" class="btn big accent">계속하기</button>
     <button id="btnRestart" class="btn">다시 시작</button>
-    <button id="btnQuit" class="btn">메뉴로</button>
+    <button id="btnPauseSettings" class="btn">조작 · 설정</button>
+    <button id="btnQuit" class="btn">단계 선택으로</button>
+  </section>
+
+  <!-- 결과 -->
+  <section id="results" class="screen">
+    <div class="res-card">
+      <div class="res-top" id="resTitle"></div>
+      <div id="resStars" class="res-stars"></div>
+      <div class="res-score"><b id="resScore">0</b><small id="resBest"></small></div>
+      <div id="resGoals" class="res-goals"></div>
+      <div id="resStats" class="res-stats"></div>
+      <div class="res-btns">
+        <button id="btnResWorld" class="btn">단계 선택</button>
+        <button id="btnRetry" class="btn">다시 하기</button>
+        <button id="btnNext" class="btn accent">다음 단계 ▶</button>
+      </div>
+    </div>
   </section>
 
   <div id="countdown"></div>
-  <div id="toast"></div>
-  <div id="loading"><div class="spin"></div>월드 불러오는 중…</div>
+  <div id="loading"><div class="spin"></div><span id="loadingText">불러오는 중…</span></div>
 
   <script type="module" src="main.js"></script>
 </body>
