@@ -5,19 +5,21 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { WORLDS, GROUPS, makeSky } from './worlds.js';
-import { buildCar, MODELS, COLORS, WHEELS, SPOILERS, STANCES } from './cars.js';
+import { buildCar, MODELS, COLORS } from './cars.js';
 import { planStage, buildStunts, stuntMarkers, G } from './stunts.js';
 
 // ───────── 저장 데이터 ─────────
 const DEFAULT = {
   model: 'roadster', color: 'pearl', custom: '#33c3ff', wheel: 'aero', spoiler: 'none', stance: 'normal',
-  coins: 0, progress: {}, last: { world: 'lab', stage: 0 },
+  coins: 0, progress: {}, last: { world: 'country', stage: 0 }, v: 3,
   settings: { hand: 'right', sens: 1, shake: true },
 };
 let save = structuredClone(DEFAULT);
 try { const raw = JSON.parse(localStorage.getItem('gamesky-save-v2') || '{}'); save = { ...save, ...raw, settings: { ...DEFAULT.settings, ...(raw.settings || {}) } }; } catch (e) { /* 저장소 없음 */ }
 function persist() { try { localStorage.setItem('gamesky-save-v2', JSON.stringify(save)); } catch (e) { /* 무시 */ } }
-if (!MODELS[save.model]) save.model = DEFAULT.model;
+// 차는 테슬라 로드스터 한 가지 (색상만 바꿀 수 있음)
+Object.assign(save, { model: 'roadster', wheel: 'aero', spoiler: 'none', stance: 'normal' });
+if ((save.v || 0) < 3) { save.v = 3; save.last = { world: 'country', stage: 0 }; persist(); }
 const worldById = id => WORLDS.find(w => w.id === id) || WORLDS[0];
 const prog = (wid, i) => ((save.progress[wid] || [])[i]) || { stars: 0, best: 0 };
 const unlocked = (wid, i) => i === 0 || prog(wid, i - 1).stars > 0;
@@ -51,7 +53,7 @@ const TAU = Math.PI * 2;
 let env = null, stunts = null, world = null, stageIdx = 0, stage = null;
 let carHolder = null, car = null;
 let mode = 'title';
-const input = { boost: false, brake: false, fly: false, drift: false, left: false, right: false, steerX: 0.5, pointerActive: false };
+const input = { boost: false, brake: false, fly: false, drift: false, steerX: 0.5 };
 const p = {};
 function resetPlayer(s = 8) {
   Object.assign(p, {
@@ -112,38 +114,43 @@ function spawnCar() {
 }
 
 // ───────── 입력 ─────────
-const KEYS = {
-  KeyW: 'boost', ArrowUp: 'boost', KeyS: 'brake', ArrowDown: 'brake', Space: 'fly',
-  ShiftLeft: 'drift', ShiftRight: 'drift', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
-};
+// 차는 스스로 앞으로 달린다. 방향은 마우스 커서(또는 손가락)로만 바꾼다.
+// 아래 키는 선택 사항 (마우스 버튼으로도 모두 가능)
+const KEYS = { Space: 'fly', ShiftLeft: 'drift', ShiftRight: 'drift' };
 const TAP = { KeyQ: 'rollL', KeyE: 'rollR', KeyR: 'flip', KeyF: 'land' };
 window.addEventListener('keydown', e => {
   if (e.repeat && TAP[e.code]) return;
-  if (KEYS[e.code]) { input[KEYS[e.code]] = true; if (KEYS[e.code] === 'left' || KEYS[e.code] === 'right') input.pointerActive = false; }
+  if (KEYS[e.code]) input[KEYS[e.code]] = true;
   if (TAP[e.code]) action(TAP[e.code]);
   if (mode === 'play' && (KEYS[e.code] || TAP[e.code])) e.preventDefault();
   if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') setMode('pause'); else if (mode === 'pause') resume(); }
 });
 window.addEventListener('keyup', e => { if (KEYS[e.code]) input[KEYS[e.code]] = false; });
 
-// 마우스/손가락 위치로 조향
+// 마우스 커서 / 손가락 위치로 조향 (화면 왼쪽 = 왼쪽, 오른쪽 = 오른쪽)
+// 마우스 왼쪽 버튼 길게 = 점프 · 비행, 오른쪽 버튼 길게 = 드리프트
 let steerPointer = null;
 canvas.addEventListener('pointerdown', e => {
   if (mode === 'play') {
-    if (e.pointerType === 'mouse') { if (e.button === 0) input.fly = true; }
-    else { steerPointer = e.pointerId; input.steerX = e.clientX / window.innerWidth; input.pointerActive = true; }
+    if (e.pointerType === 'mouse') { if (e.button === 0) input.fly = true; if (e.button === 2) input.drift = true; }
+    else { steerPointer = e.pointerId; input.steerX = e.clientX / window.innerWidth; }
   } else { orbitDrag = true; lastX = e.clientX; }
 });
 window.addEventListener('pointermove', e => {
-  if (mode === 'play') {
-    if (e.pointerType === 'mouse' || e.pointerId === steerPointer) { input.steerX = e.clientX / window.innerWidth; input.pointerActive = true; }
-  } else if (orbitDrag) { orbit -= (e.clientX - lastX) * 0.008; lastX = e.clientX; }
+  if (mode === 'play' || mode === 'pause') {
+    if (e.pointerType === 'mouse' || e.pointerId === steerPointer) input.steerX = e.clientX / window.innerWidth;
+  } else {
+    if (e.pointerType === 'mouse') input.steerX = e.clientX / window.innerWidth;
+    if (orbitDrag) { orbit -= (e.clientX - lastX) * 0.008; lastX = e.clientX; }
+  }
 });
 window.addEventListener('pointerup', e => {
   if (e.pointerType === 'mouse' && e.button === 0) input.fly = false;
+  if (e.pointerType === 'mouse' && e.button === 2) input.drift = false;
   if (e.pointerId === steerPointer) steerPointer = null;
   orbitDrag = false;
 });
+window.addEventListener('blur', () => { input.fly = false; input.drift = false; });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // 터치 버튼
@@ -223,25 +230,18 @@ function update(dt) {
     return;
   }
 
-  // ── 속도 ──
-  const cruise = 30;
-  let target = input.boost ? maxV : input.brake ? 10 : cruise;
-  if (p.lock) target = 0;
+  // ── 속도: 출발 신호 후 스스로 가속해서 일정한 속도로 달린다 ──
+  let target = p.lock ? 0 : maxV;
   if (!p.air) {
-    const acc = p.v < target ? 16 + spd * 0.06 : 26;
+    const acc = p.v < target ? 12 + spd * 0.05 : 26;
     p.v += THREE.MathUtils.clamp(target - p.v, -acc * dt, acc * dt);
     p.v -= G * 0.45 * f0.tan.y * dt;
-  } else if (input.boost) p.v = Math.min(maxV, p.v + 5 * dt);
+  }
   if (p.boostT > 0) { p.boostT -= dt; p.v = Math.max(p.v, maxV * 1.22); }
   p.v = THREE.MathUtils.clamp(p.v, -8, maxV * 1.3);
 
-  // ── 조향: 마우스/손가락 위치를 따라감 ──
-  if (input.pointerActive) {
-    p.targetD = THREE.MathUtils.clamp((input.steerX - 0.5) * 2.3 * save.settings.sens, -1, 1) * hw;
-  } else {
-    const k = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-    p.targetD = THREE.MathUtils.clamp(p.targetD + k * 16 * dt, -hw, hw);
-  }
+  // ── 조향: 커서가 있는 쪽으로 차가 방향을 튼다 ──
+  p.targetD = THREE.MathUtils.clamp((input.steerX - 0.5) * 2.3 * save.settings.sens, -1, 1) * hw;
   const latMax = (p.drifting ? 17 : 12 + hand * 0.04) * (p.air ? 0.8 : 1);
   const lat = THREE.MathUtils.clamp((p.targetD - p.d) * 5, -latMax, latMax);
   p.d += lat * dt;
@@ -267,7 +267,7 @@ function update(dt) {
     if (!p.air && tr.inGap(p.s)) { p.air = true; p.vh = 0; p.airTime = 0; }
   }
 
-  // ── 비행 (SPACE 길게) ──
+  // ── 비행 (마우스 왼쪽 버튼 / SPACE 길게) ──
   p.flying = false;
   if (input.fly && p.energy > 0 && !p.lock) {
     if (!p.air) { p.air = true; p.vh = 9; p.h = Math.max(p.h, 0.2); p.airTime = 0; p.pending = 0; p.airTricks = 0; p.energy -= 6; }
@@ -313,7 +313,7 @@ function update(dt) {
     p.driftTime += dt;
     p.v *= 1 - 0.05 * dt;
   } else if (p.drifting) endDrift(true);
-  const yawTarget = p.drifting ? p.driftDir * 0.6 : THREE.MathUtils.clamp(-lat * 0.012, -0.2, 0.2);
+  const yawTarget = p.drifting ? p.driftDir * 0.6 : THREE.MathUtils.clamp(-lat * 0.018, -0.28, 0.28);
   p.yaw += (yawTarget - p.yaw) * Math.min(1, dt * 6);
 
   // ── 부스트 패드 ──
@@ -411,7 +411,7 @@ function placePlayer(dt) {
     flame.scale.set(1, 0.6 + Math.random() * 0.6 * (p.flying ? 1.4 : 0.6), 1);
     glow.visible = p.fold > 0.5;
   });
-  (ud.boosters || []).forEach(b => { b.visible = input.boost || p.boostT > 0; b.scale.y = 0.7 + Math.random() * 0.6; });
+  (ud.boosters || []).forEach(b => { b.visible = p.boostT > 0; b.scale.y = 0.7 + Math.random() * 0.6; });
   (ud.lights?.tail || []).forEach(l => (l.material.emissiveIntensity = input.brake ? 5 : 2));
 
   // 추격 카메라 (공중에서는 더 멀리, 루프에서는 위쪽 벡터를 따라감)
@@ -686,24 +686,16 @@ function showStory() {
 $('storyNext').onclick = () => { storyIdx = (storyIdx + 1) % world.story.length; showStory(); };
 
 // ── 차고 ──
-const modelIds = Object.keys(MODELS);
 function refreshGarage() {
   const spec = MODELS[save.model];
-  $('carName').textContent = spec.name; $('carSub').textContent = spec.sub;
+  $('carName').textContent = `Tesla ${spec.name}`; $('carSub').textContent = spec.sub;
   ['statSpeed', 'statHandling', 'statBrake'].forEach((id, i) => ($(id).style.width = `${spec.stats[i]}%`));
   document.querySelectorAll('#swatches .swatch').forEach(el => el.classList.toggle('on', el.dataset.id === save.color));
-  document.querySelectorAll('.chip[data-group]').forEach(el => el.classList.toggle('on', save[el.dataset.group] === el.dataset.id));
-  document.querySelectorAll('.model-dot').forEach(el => el.classList.toggle('on', el.dataset.id === save.model));
+  $('paintName').textContent = save.color === 'custom' ? '커스텀 컬러' : (COLORS.find(c => c.id === save.color) || COLORS[0]).name;
   $('customColor').value = save.custom;
   document.querySelectorAll('.coinCount').forEach(el => (el.textContent = save.coins.toLocaleString()));
 }
 function rebuildCar() { if (env) { spawnCar(); placePlayer(0); } }
-function changeModel(dir) {
-  const i = modelIds.indexOf(save.model);
-  save.model = modelIds[(i + dir + modelIds.length) % modelIds.length];
-  persist(); rebuildCar(); refreshGarage();
-}
-
 function buildUI() {
   COLORS.forEach(c => {
     const b = document.createElement('button');
@@ -712,26 +704,6 @@ function buildUI() {
     $('swatches').appendChild(b);
   });
   $('customColor').addEventListener('input', e => { save.custom = e.target.value; save.color = 'custom'; persist(); rebuildCar(); refreshGarage(); $('paintName').textContent = '커스텀 컬러'; });
-  [['wheel', WHEELS, 'optWheel'], ['spoiler', SPOILERS, 'optSpoiler'], ['stance', STANCES, 'optStance']].forEach(([key, list, el]) => list.forEach(o => {
-    const b = document.createElement('button');
-    b.className = 'chip'; b.dataset.group = key; b.dataset.id = o.id; b.textContent = o.name;
-    b.onclick = () => { save[key] = o.id; persist(); rebuildCar(); refreshGarage(); };
-    $(el).appendChild(b);
-  }));
-  modelIds.forEach(id => {
-    const b = document.createElement('button');
-    b.className = 'model-dot'; b.dataset.id = id; b.textContent = MODELS[id].name.replace('Model ', '');
-    b.onclick = () => { save.model = id; persist(); rebuildCar(); refreshGarage(); };
-    $('modelDots').appendChild(b);
-  });
-  document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
-    document.body.dataset.tab = b.dataset.tab;
-    document.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('on', x === b));
-  }));
-  document.body.dataset.tab = 'paint';
-  $('prevCar').onclick = () => changeModel(-1);
-  $('nextCar').onclick = () => changeModel(1);
-
   // 설정
   const applySettings = () => {
     document.body.dataset.hand = save.settings.hand;
@@ -777,6 +749,7 @@ function loop() {
     else if (mode === 'brief' || mode === 'results') placePlayer(dt);
     else if (mode !== 'pause') updateShowroom(dt);
     updateCoins(t);
+    stunts.coinMesh.visible = mode === 'play' || mode === 'pause' || mode === 'brief' || mode === 'results';
     if (env.update) env.update(t, dt, camera.position);
     env.sun.target.position.copy(carHolder.position);
     env.sun.position.copy(carHolder.position).addScaledVector(env.sunDir, 150);

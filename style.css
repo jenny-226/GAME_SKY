@@ -165,8 +165,8 @@ body[data-mode="brief"] #brief { display: flex; align-items: center; justify-con
 .ebar i.low { background: #ff5a5a; }
 
 /* 터치 버튼 (오른손잡이: 오른쪽 아래) */
-.pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, 62px); grid-template-rows: 54px 62px 86px; gap: 8px; grid-template-areas: "rl fl rr" "dr ld ld" "bo fy fy"; }
-body[data-hand="left"] .pad { right: auto; left: max(12px, env(safe-area-inset-left)); grid-template-areas: "rl fl rr" "ld ld dr" "fy fy bo"; }
+.pad { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, 62px); grid-template-rows: 54px 62px 86px; gap: 8px; grid-template-areas: "rl fl rr" "dr ld ld" "fy fy fy"; }
+body[data-hand="left"] .pad { right: auto; left: max(12px, env(safe-area-inset-left)); grid-template-areas: "rl fl rr" "ld ld dr" "fy fy fy"; }
 .pad button { border-radius: 16px; background: rgba(255,255,255,.14); border: 2px solid rgba(255,255,255,.35); font: 700 13px 'Oswald'; letter-spacing: 1px; backdrop-filter: blur(4px); touch-action: none; transition: background .08s; }
 .pad button.down { background: color-mix(in srgb, var(--accent) 60%, transparent); }
 .pad [data-tap="rollL"] { grid-area: rl; font-size: 24px; } .pad [data-tap="flip"] { grid-area: fl; } .pad [data-tap="rollR"] { grid-area: rr; font-size: 24px; }

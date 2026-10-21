@@ -21,11 +21,11 @@
   <section id="title" class="screen">
     <div class="logo">GAME <span>SKY</span></div>
     <div class="subtitle">LANDMARK STUNT TOUR</div>
-    <p class="tagline">하늘을 나는 테슬라로 세계 명소를 누비는 스턴트 쇼</p>
+    <p class="tagline">테슬라 로드스터로 시골길과 세계 명소를 달리는 스턴트 쇼 · 커서로 방향만 조종하세요</p>
     <div class="menu-btns">
       <button id="btnTour" class="btn big accent">🌍 월드 투어</button>
       <button id="btnContinue" class="btn">▶ 이어하기 · <span id="titleWorld"></span></button>
-      <button id="btnGarage" class="btn">🚗 차고 (색상·모양)</button>
+      <button id="btnGarage" class="btn">🚗 차고 (색상)</button>
       <button id="btnSettings" class="btn">⚙️ 조작 · 설정</button>
     </div>
   </section>
@@ -55,29 +55,17 @@
     <div class="topbar"><button id="garageBack" class="back">↩</button><h2>차고</h2><div class="coins"><i>●</i><span class="coinCount">0</span></div></div>
     <div class="panel-left">
       <div class="sel-title"><span class="ic">🚘</span><b>CARS</b><em>Selection</em></div>
-      <div class="car-name"><span id="carName">Model 3</span><small id="carSub"></small></div>
+      <div class="car-name"><span id="carName">Tesla Roadster</span><small id="carSub"></small></div>
       <div class="stat"><span>⏱</span><label>SPEED</label><div class="bar"><i id="statSpeed"></i></div></div>
       <div class="stat"><span>🛞</span><label>HANDLING</label><div class="bar"><i id="statHandling"></i></div></div>
       <div class="stat"><span>🛑</span><label>BRAKE</label><div class="bar"><i id="statBrake"></i></div></div>
-      <p class="fly-note">✈ 모든 차량은 비행 모드 탑재: 공중에서 바퀴가 접히며 추진기로 변신!</p>
+      <p class="fly-note">🎨 차 디자인은 고정, 색상만 고를 수 있어요 · ✈ 공중에서 바퀴가 접히며 추진기로 변신!</p>
     </div>
-    <div class="panel-right">
-      <button class="tool on" data-tab="paint"><span>🎨</span>Paint</button>
-      <button class="tool" data-tab="shape"><span>⚙️</span>Shape</button>
-    </div>
-    <button id="prevCar" class="arrow left">«</button>
-    <button id="nextCar" class="arrow right">»</button>
     <div class="tray">
       <div class="tray-paint">
         <div class="tray-label">PAINT · <span id="paintName">Pearl White</span></div>
         <div id="swatches"></div>
         <label class="custom">커스텀<input type="color" id="customColor" /></label>
-      </div>
-      <div class="tray-shape">
-        <div class="opt-row"><span>모델</span><div id="modelDots"></div></div>
-        <div class="opt-row"><span>휠</span><div id="optWheel"></div></div>
-        <div class="opt-row"><span>스포일러</span><div id="optSpoiler"></div></div>
-        <div class="opt-row"><span>차고</span><div id="optStance"></div></div>
       </div>
     </div>
   </section>
@@ -89,23 +77,21 @@
       <div class="set-row"><span>손잡이 (버튼 위치)</span><div><button class="chip" data-hand="right">오른손잡이</button><button class="chip" data-hand="left">왼손잡이</button></div></div>
       <div class="set-row"><span>조향 감도</span><input type="range" id="sensRange" min="0.6" max="1.6" step="0.1" /></div>
       <div class="set-row"><span>화면 흔들림</span><input type="checkbox" id="shakeToggle" /></div>
-      <h3>⌨️ PC (오른손: 마우스 / 왼손: 키보드)</h3>
+      <h3>🖱️ PC (마우스만으로 플레이)</h3>
       <div class="keys">
-        <div><kbd>마우스 이동</kbd><span>커서 방향으로 좌우 이동</span></div>
-        <div><kbd>W</kbd><span>가속 (누르고 있기)</span></div>
-        <div><kbd>S</kbd><span>감속</span></div>
-        <div><kbd>SPACE</kbd> 또는 <kbd>마우스 왼쪽</kbd><span>점프 · 비행 (누르고 있기)</span></div>
-        <div><kbd>SHIFT</kbd><span>드리프트 (누르고 좌우로)</span></div>
-        <div><kbd>Q</kbd> <kbd>E</kbd><span>공중 좌/우 배럴롤</span></div>
-        <div><kbd>R</kbd><span>공중 앞 플립</span></div>
-        <div><kbd>F</kbd><span>착지 자세 잡기 (착지 직전에!)</span></div>
+        <div><kbd>자동 주행</kbd><span>출발하면 차가 스스로 앞으로 달려요 (가속 버튼 없음)</span></div>
+        <div><kbd>마우스 커서</kbd><span>커서를 왼쪽/오른쪽으로 옮기면 그쪽으로 방향을 틀어요</span></div>
+        <div><kbd>마우스 왼쪽</kbd> 또는 <kbd>SPACE</kbd><span>점프 · 비행 (누르고 있기)</span></div>
+        <div><kbd>마우스 오른쪽</kbd> 또는 <kbd>SHIFT</kbd><span>드리프트 (누르고 있기)</span></div>
+        <div><kbd>Q</kbd> <kbd>E</kbd> <kbd>R</kbd><span>(선택) 공중 배럴롤 · 앞 플립</span></div>
+        <div><kbd>F</kbd><span>(선택) 착지 자세 잡기</span></div>
         <div><kbd>ESC</kbd><span>일시정지</span></div>
       </div>
       <h3>📱 모바일</h3>
       <div class="keys">
-        <div><kbd>손가락 드래그</kbd><span>손가락이 있는 쪽으로 차가 이동</span></div>
-        <div><kbd>FLY</kbd><span>점프 · 비행 (누르고 있기)</span></div>
-        <div><kbd>BOOST</kbd> <kbd>DRIFT</kbd><span>가속 · 드리프트</span></div>
+        <div><kbd>자동 주행</kbd><span>차가 스스로 앞으로 달려요</span></div>
+        <div><kbd>손가락 드래그</kbd><span>손가락이 있는 쪽으로 방향을 틀어요</span></div>
+        <div><kbd>FLY</kbd> <kbd>DRIFT</kbd><span>점프 · 비행 / 드리프트 (누르고 있기)</span></div>
         <div><kbd>⟲</kbd> <kbd>⟳</kbd> <kbd>FLIP</kbd><span>공중 회전</span></div>
         <div><kbd>LAND</kbd><span>착지 자세 (착지 직전에 누르면 PERFECT)</span></div>
       </div>
@@ -123,7 +109,7 @@
         <div>🎯 <span id="briefMission"></span> <b>★</b></div>
         <div>💯 목표 점수 <span id="briefTarget"></span> <b>★</b></div>
       </div>
-      <div class="brief-tips">점프 → 공중에서 <kbd>Q</kbd>/<kbd>E</kbd>/<kbd>R</kbd> 회전 → 착지 직전 <kbd>F</kbd> = PERFECT! · <kbd>SPACE</kbd> 길게 = 비행<br>🎯 <kbd>W</kbd>/<kbd>S</kbd>로 속도를 조절해 초록 목표 패드에 착지하면 BULLSEYE 보너스</div>
+      <div class="brief-tips">🚗 차는 스스로 달려요 — <b>마우스 커서</b>를 좌우로 움직여 방향만 조종하세요<br>🖱️ 왼쪽 버튼 길게 = 점프 · 비행 · 오른쪽 버튼 길게 = 드리프트 · (선택) 공중에서 <kbd>Q</kbd>/<kbd>E</kbd>/<kbd>R</kbd> 회전</div>
       <div class="brief-btns"><button id="briefBack" class="btn">← 단계 선택</button><button id="btnGo" class="btn big accent">START</button></div>
     </div>
   </section>
@@ -148,7 +134,6 @@
       <button data-tap="rollR" class="air">⟳</button>
       <button data-hold="drift" class="drift">DRIFT</button>
       <button data-tap="land" class="land">LAND</button>
-      <button data-hold="boost" class="boost">BOOST</button>
       <button data-hold="fly" class="fly">FLY</button>
     </div>
   </section>

@@ -5,6 +5,7 @@ import { rng, fbm, noise2, smoothstep, canvasTexture, speckle, roadTexture } fro
 import { V, makeSky, lights, instanced, mat4, trackNearestFn, makeTerrain, alongTrack, lampGeometry, makeParticles } from './scene-kit.js';
 import * as P from './props.js';
 import { buildHills, buildRamp, buildCircuit, buildClouds } from './worlds-classic.js';
+import { buildCountry } from './worlds-country.js';
 
 // 닫힌 코스 모양 (반지름에 물결을 더한 루프)
 function loop(rx, rz, waves = [], n = 30, rot = 0) {
@@ -579,13 +580,29 @@ function stages(names, overrides = []) {
 
 export const WORLDS = [
   {
+    id: 'country', group: 'country', name: '시골길 드라이브', en: 'COUNTRY ROAD', flag: '🌾', country: '들판 · 농장 · 먼 산',
+    accent: '#8fc54a', thumb: 'linear-gradient(170deg,#2f6cc0,#b8d2ea 45%,#86a443 46%,#c7ae5f 70%,#56742f)',
+    host: { name: '농부 할아버지', emoji: '👨‍🌾' },
+    story: [
+      '“어서 오게! 공기 좋은 시골길에 잘 왔구먼.”',
+      '“차는 알아서 앞으로 달리니, 마우스 커서만 좌우로 움직여서 길을 따라가면 되네.”',
+      '“밭 사이 언덕길에서 점프도 해 보고, 소들 놀라지 않게 살살 날아 보게!”',
+    ],
+    build: buildCountry,
+    stages: stages([['들판 드라이브', '밭 사이 시골길 첫 점프'], ['농장길 드리프트', '건초 더미 옆 커브길'], ['언덕 위 하늘길', '들판 위로 날아올라']], [
+      {},
+      {},
+      { recipe: ['ramp', 'rings', 'boost', 'mega', 'rings', 'ramp', 'rings_low', 'finale'] },
+    ]),
+  },
+  {
     id: 'lab', group: 'prologue', name: '비밀 테스트 트랙', en: 'SECRET TEST TRACK', flag: '🧪', country: '테슬라 연구소',
     accent: '#ff3448', thumb: 'linear-gradient(160deg,#01020a,#0b1634 60%,#ff2236 61%,#07080c 64%)',
     host: { name: '엔지니어 미라', emoji: '🧑‍🔬' },
     story: [
       '“영상이 유출됐어. 우리가 숨겨 온 하늘을 나는 로드스터, 코드명 SKY.”',
       '“세계 명소를 도는 스카이 투어 스턴트 쇼가 시작되기 전에, 네가 이 차를 길들여야 해.”',
-      '“램프에서 점프하고, SPACE로 날아오르고, 착지 직전에 F를 눌러 자세를 잡아!”',
+      '“차는 알아서 달려. 커서로 방향만 잡고, 마우스 왼쪽 버튼을 길게 눌러 날아올라!”',
     ],
     build: () => buildRamp(),
     stages: stages([['첫 점프', '램프에서 뛰어올라 착지를 배워요'], ['비행 테스트', '스카이 링을 통과하며 비행을 익혀요'], ['루프 & 스카이', '수직 루프와 공중 회전 마스터']], [
@@ -731,6 +748,7 @@ export const WORLDS = [
 ];
 
 export const GROUPS = [
+  { id: 'country', title: '시골길', sub: '들판과 농장을 가로지르는 드라이브' },
   { id: 'prologue', title: '프롤로그', sub: '비밀 테스트 트랙에서 조작을 익혀요' },
   { id: 'city', title: '세계 6대 관광도시', sub: '랜드마크를 배경으로 스턴트 쇼' },
   { id: 'hidden', title: '숨은 명소', sub: '덜 알려진 절경 속 특별 무대' },

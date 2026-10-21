@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { smoothstep } from './utils.js';
+import { buildRoadsterBody } from './roadster.js';
 
 // 길이 L, 폭 W, 축거 wb, 앞/뒤 오버행 비율, 바퀴 반지름, 실루엣(뒤→앞, x는 0~1 비율, y는 m)
 export const MODELS = {
@@ -27,7 +28,7 @@ export const MODELS = {
     top: [[0, 0.36], [0, 0.72], [0.01, 1.0], [0.04, 1.16], [0.12, 1.32], [0.24, 1.6], [0.36, 1.68], [0.5, 1.68], [0.6, 1.62], [0.68, 1.4], [0.76, 1.12], [0.87, 1.0], [0.95, 0.86], [0.995, 0.68], [1, 0.46], [0.99, 0.32]],
   },
   roadster: {
-    name: 'Roadster', sub: '2nd Gen', L: 4.3, W: 1.98, wb: 2.6, rear: 0.2, r: 0.35,
+    name: 'Roadster', sub: 'SKY Edition', L: 4.35, W: 2.0, wb: 2.65, rear: 0.18, r: 0.35,
     glass: [0.3, 0.72], belt: 0.9, lightbar: false, stats: [100, 92, 88],
     top: [[0, 0.3], [0, 0.55], [0.01, 0.78], [0.05, 0.9], [0.15, 0.94], [0.27, 1.02], [0.38, 1.14], [0.47, 1.19], [0.54, 1.18], [0.62, 1.08], [0.72, 0.88], [0.85, 0.76], [0.95, 0.64], [0.995, 0.48], [1, 0.36], [0.99, 0.24]],
   },
@@ -257,7 +258,7 @@ function surfaceStrip(spec, prof, y, end, width, mat, thick = 0.035) {
 }
 
 function buildWheel(spec, style, paintMat) {
-  const r = spec.r, w = spec.angular ? 0.32 : 0.26;
+  const r = spec.r, w = spec.angular ? 0.32 : style === 'rdstr' ? 0.29 : 0.26;
   const g = new THREE.Group();
   const sp = new THREE.Group();
   g.add(sp);
@@ -265,17 +266,36 @@ function buildWheel(spec, style, paintMat) {
   tire.rotation.x = Math.PI / 2;
   tire.castShadow = true;
   sp.add(tire);
-  const side = new THREE.Mesh(new THREE.TorusGeometry(r * 0.86, r * 0.14, 10, 36), tireMat);
+  const side = style === 'rdstr' ? new THREE.Mesh(new THREE.TorusGeometry(r * 0.9, r * 0.1, 10, 36), tireMat) : new THREE.Mesh(new THREE.TorusGeometry(r * 0.86, r * 0.14, 10, 36), tireMat);
   side.position.z = w / 2 - 0.02;
   sp.add(side);
-  const rimR = r * 0.74;
+  const rimR = r * (style === 'rdstr' ? 0.8 : 0.74);
   const rimFace = new THREE.Group();
   rimFace.position.z = w / 2 - 0.01;
   sp.add(rimFace);
   const rimMat = style === 'sport'
     ? new THREE.MeshStandardMaterial({ color: 0x2a2b2e, metalness: 0.8, roughness: 0.3 })
     : new THREE.MeshStandardMaterial({ color: 0xc9cbce, metalness: 0.9, roughness: 0.25 });
-  if (style === 'aero') {
+  if (style === 'rdstr') {
+    // 로드스터 휠: 은색 림 + 밝은 디스크 위 꼬인 6스포크 (블랙)
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(rimR, 0.022, 8, 48), new THREE.MeshStandardMaterial({ color: 0xdedfe0, metalness: 0.9, roughness: 0.22 }));
+    lip.position.z = 0.02; rimFace.add(lip);
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(rimR, rimR, 0.02, 48), new THREE.MeshStandardMaterial({ color: 0xe8e9ea, metalness: 0.35, roughness: 0.35 }));
+    disc.rotation.x = Math.PI / 2; disc.position.z = 0.012; rimFace.add(disc);
+    const spokeMat = new THREE.MeshStandardMaterial({ color: 0x141518, metalness: 0.5, roughness: 0.35 });
+    // 안쪽은 넓고 바깥으로 갈수록 가늘어지며 살짝 휘어진 스포크
+    const spokeShape = new THREE.Shape();
+    spokeShape.moveTo(0, -0.06); spokeShape.quadraticCurveTo(rimR * 0.5, -0.05, rimR * 0.98, 0.02);
+    spokeShape.lineTo(rimR * 0.98, 0.07); spokeShape.quadraticCurveTo(rimR * 0.5, 0.02, 0, 0.06); spokeShape.closePath();
+    const spokeGeo = new THREE.ExtrudeGeometry(spokeShape, { depth: 0.04, bevelEnabled: false });
+    for (let i = 0; i < 6; i++) {
+      const sp = new THREE.Mesh(spokeGeo, spokeMat);
+      sp.rotation.z = (i / 6) * Math.PI * 2; sp.position.z = 0.015;
+      rimFace.add(sp);
+    }
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(rimR * 0.2, rimR * 0.22, 0.07, 24), spokeMat);
+    hub.rotation.x = Math.PI / 2; hub.position.z = 0.05; rimFace.add(hub);
+  } else if (style === 'aero') {
     // 테슬라 에어로 커버: 평평한 원판 + 5개 홈
     const disc = new THREE.Mesh(new THREE.CylinderGeometry(rimR, rimR, 0.04, 40), new THREE.MeshStandardMaterial({ color: 0x9da0a4, metalness: 0.7, roughness: 0.35 }));
     disc.rotation.x = Math.PI / 2; rimFace.add(disc);
@@ -317,18 +337,8 @@ function buildWheel(spec, style, paintMat) {
   return g;
 }
 
-// 테슬라 차량 만들기
-export function buildCar(config) {
-  const spec = MODELS[config.model] || MODELS.model3;
-  const isCustom = config.color === 'custom' && config.custom;
-  const color = isCustom ? { id: 'custom', hex: config.custom, metal: 0.55 } : (COLORS.find(c => c.id === config.color) || COLORS[0]);
-  const stance = STANCES.find(s => s.id === config.stance) || STANCES[0];
-  const paint = paintMaterial(color);
-  if (spec.angular) paint.flatShading = true;
-  const car = new THREE.Group();
-  const body = new THREE.Group(); // 차체 (롤 기울기 적용)
-  car.add(body);
-
+// 기본 차체 (로드스터 외 차량: 도로 위 다른 차들에 사용)
+function buildStandardBody(spec, body, paint, config) {
   const L = spec.L, W = spec.W;
   const prof = makeProfile(spec);
   const { xr, xf } = prof;
@@ -446,10 +456,30 @@ export function buildCar(config) {
     });
   }
 
+  return { prof, lights };
+}
+
+// 테슬라 차량 만들기
+export function buildCar(config) {
+  const spec = MODELS[config.model] || MODELS.model3;
+  const isCustom = config.color === 'custom' && config.custom;
+  const color = isCustom ? { id: 'custom', hex: config.custom, metal: 0.55 } : (COLORS.find(c => c.id === config.color) || COLORS[0]);
+  const stance = STANCES.find(s => s.id === config.stance) || STANCES[0];
+  const paint = paintMaterial(color);
+  if (spec.angular) paint.flatShading = true;
+  const car = new THREE.Group();
+  const body = new THREE.Group(); // 차체 (롤 기울기 적용)
+  car.add(body);
+
+  const W = spec.W;
+  const { prof, lights } = config.model === 'roadster' ? buildRoadsterBody(spec, body, paint) : buildStandardBody(spec, body, paint, config);
+  const { xr, xf } = prof;
+  const L = spec.L;
+
   // 바퀴
   const wheels = [];
   const track = W / 2 - 0.15;
-  const wheelStyle = config.wheel || (spec.angular ? 'cyber' : 'aero');
+  const wheelStyle = config.model === 'roadster' ? 'rdstr' : config.wheel || (spec.angular ? 'cyber' : 'aero');
   // 비행 모드: 바퀴가 수평으로 접히며 추진기로 변신 (fold 그룹)
   const folds = [];
   const flameMat = new THREE.MeshBasicMaterial({ color: '#7fe8ff', transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });

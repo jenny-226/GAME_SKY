@@ -231,7 +231,7 @@ export function buildStunts(env, plan, worldId) {
       }
       case 'rings': {
         s = flatS(track, s, 160) ?? s;
-        addSign(s - 30, 'SKY RINGS ▲ SPACE', '#ffd54a');
+        addSign(s - 30, 'SKY RINGS ▲ FLY', '#ffd54a');
         addRings(s, 7, t => 4 + Math.sin(t * Math.PI) * 16, i => Math.sin(i * 1.2) * 4);
         break;
       }
